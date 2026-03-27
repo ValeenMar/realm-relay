@@ -56,8 +56,31 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // ─── Reenvío de mensajes de texto custom (player_info, etc) ───
+    if (!isBinary) {
+      try {
+        const textMsg = JSON.parse(data.toString());
+        if (textMsg.type) {
+          // Es un mensaje custom del juego — reenviar a todos los peers de la sala
+          const room = rooms.get(relay.room);
+          if (!room) return;
+          const fwd = JSON.stringify(textMsg);
+          if (relay.isHost) {
+            for (const [pid, clientWs] of room.clients) {
+              if (clientWs.readyState === 1) clientWs.send(fwd);
+            }
+          } else {
+            if (room.host && room.host.readyState === 1) room.host.send(fwd);
+            for (const [pid, clientWs] of room.clients) {
+              if (pid !== relay.peerId && clientWs.readyState === 1) clientWs.send(fwd);
+            }
+          }
+        }
+      } catch(e) {}
+      return;
+    }
+
     // ─── Datos de juego (binario) ───
-    if (!isBinary) return;
     const room = rooms.get(relay.room);
     if (!room) return;
 
