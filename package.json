@@ -1,8 +1,11 @@
 {
   "name": "realm-relay",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WebSocket relay server for RealmBrawl multiplayer",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js"
   },

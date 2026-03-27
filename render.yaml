@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: realm-relay
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true
