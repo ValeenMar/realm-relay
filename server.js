@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8080;
@@ -66,8 +66,11 @@ wss.on('connection', (ws, req) => {
     if (!isBinary) {
       try {
         const textMsg = JSON.parse(data.toString());
-        // Ping: responder al sender, no broadcast
-        if (textMsg.type === 'ping') { ws.send(JSON.stringify({ type: 'pong', t: textMsg.t })); return; }
+        // Ping: responder directamente al sender, no hacer broadcast
+        if (textMsg.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', t: textMsg.t }));
+          return;
+        }
         if (textMsg.type) {
           const room = rooms.get(relay.room);
           if (!room) return;
@@ -100,10 +103,14 @@ wss.on('connection', (ws, req) => {
         if (cws && cws.readyState === 1) cws.send(outBuf);
       }
     } else {
-      const buf = Buffer.from(data);
-      const outBuf = Buffer.alloc(4 + buf.length);
+      // Cliente → host: strip 4-byte target prefix (igual que host→client) y prepend source.
+      // Sin este fix: host recibe [source][target][rpc_data], quita source,
+      // Godot recibe [target][rpc_data] → todos los RPCs del cliente llegan corruptos.
+      const buf        = Buffer.from(data);
+      const rpcPayload = buf.length >= 4 ? buf.slice(4) : buf;
+      const outBuf     = Buffer.alloc(4 + rpcPayload.length);
       outBuf.writeUInt32LE(relay.peerId, 0);
-      buf.copy(outBuf, 4);
+      rpcPayload.copy(outBuf, 4);
       if (room.host && room.host.readyState === 1) room.host.send(outBuf);
     }
   });
